@@ -8,8 +8,34 @@ import {
 } from "react-hook-form";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FormData } from "../types";
 import simulatedApi from "../api/api";
+import {z} from "zod"
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const formSchema = z.object({
+  firstName : z.string().min(1, "First Name is Required"),
+  lastName: z.string().min(1,"Last Name is Required"),
+  email: z.string().email("Invalid Email Address"),
+  age: z.number().min(18, "You must be at least 18 years old"),
+  gender: z.enum(["male", "female", "other"],{
+    message: "Gender is Required"
+    // z.enum is provided to check amongst certain values
+  }),
+  address: z.object({
+    city: z.string().min(1, "City is Required"),
+    state: z.string().min(1, "State is Required"),
+  }),
+  hobbies: z.array(
+    z.object({
+      name: z.string().min(1, "Hobby name is Required")
+    })
+  ).min(1, "At least one hobby"),
+  startDate: z.date(),
+  subscribe: z.boolean(),
+  referral: z.string().default("")
+})
+
+type FormData = z.infer<typeof formSchema>;
 
 const ReactHookForm: React.FC = () => {
   const {
@@ -25,13 +51,15 @@ const ReactHookForm: React.FC = () => {
       lastName: "",
       email: "",
       age: 18,
-      gender: "",
+      gender: undefined,
       address: { city: "", state: "" },
       hobbies: [{ name: "" }],
       startDate: new Date(),
       subscribe: false,
       referral: "",
     },
+    resolver:zodResolver(formSchema)
+
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -61,7 +89,7 @@ const ReactHookForm: React.FC = () => {
       <div>
         <label>First Name</label>
         <input
-          {...register("firstName", { required: "First Name is required" })}
+          {...register("firstName")}
         />
         {errors.firstName && (
           <p style={{ color: "orangered" }}>{errors.firstName.message}</p>
@@ -71,7 +99,7 @@ const ReactHookForm: React.FC = () => {
       <div>
         <label>Last Name</label>
         <input
-          {...register("lastName", { required: "Last Name is required" })}
+          {...register("lastName")}
         />
         {errors.lastName && (
           <p style={{ color: "orangered" }}>{errors.lastName.message}</p>
@@ -81,10 +109,7 @@ const ReactHookForm: React.FC = () => {
       <div>
         <label>Email</label>
         <input
-          {...register("email", {
-            required: "Email is required",
-            pattern: { value: /^\S+@\S+$/i, message: "Invalid email address" },
-          })}
+          {...register("email")}
         />
         {errors.email && (
           <p style={{ color: "orangered" }}>{errors.email.message}</p>
@@ -94,11 +119,7 @@ const ReactHookForm: React.FC = () => {
       <div>
         <label>Age</label>
         <input
-          type="number"
-          {...register("age", {
-            required: "Age is required",
-            min: { value: 18, message: "You must be at least 18 years old" },
-          })}
+          {...register("age", {valueAsNumber:true})}
         />
         {errors.age && (
           <p style={{ color: "orangered" }}>{errors.age.message}</p>
@@ -107,7 +128,7 @@ const ReactHookForm: React.FC = () => {
 
       <div>
         <label>Gender</label>
-        <select {...register("gender", { required: "Gender is required" })}>
+        <select {...register("gender")}>
           <option value="">Select...</option>
           <option value="male">Male</option>
           <option value="female">Female</option>
@@ -122,7 +143,7 @@ const ReactHookForm: React.FC = () => {
         <label>Address</label>
 
         <input
-          {...register("address.city", { required: "City is required" })}
+          {...register("address.city")}
           placeholder="City"
         />
         {errors.address?.city && (
@@ -130,7 +151,7 @@ const ReactHookForm: React.FC = () => {
         )}
 
         <input
-          {...register("address.state", { required: "State is required" })}
+          {...register("address.state")}
           placeholder="State"
         />
         {errors.address?.state && (
@@ -159,9 +180,7 @@ const ReactHookForm: React.FC = () => {
         {fields.map((item, index) => (
           <div key={item.id}>
             <input
-              {...register(`hobbies.${index}.name`, {
-                required: "Hobby name is required",
-              })}
+              {...register(`hobbies.${index}.name`)}
               placeholder="Hobby Name"
             />
             {errors.hobbies?.[index]?.name && (
@@ -191,9 +210,7 @@ const ReactHookForm: React.FC = () => {
         <div>
           <label>Referral Source</label>
           <input
-            {...register("referral", {
-              required: "Referral source is required if subscribing",
-            })}
+            {...register("referral")}
             placeholder="How did you hear about us?"
           />
           {errors.referral && (
